@@ -25,35 +25,88 @@ ALPHANUMERIC_CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 # Try to find system fonts automatically
 def find_system_fonts():
-    """Find available fonts on the system"""
+    """Find available fonts on the system, prioritizing WSL/Ubuntu systems"""
     fonts = []
     
-    # Common font directories by OS
-    font_dirs = []
-    if os.name == 'nt':  # Windows
-        font_dirs = [
-            'C:/Windows/Fonts',
-            'C:/Windows/System32/Fonts'
-        ]
-    elif os.name == 'posix':  # Linux/Mac
-        font_dirs = [
-            '/usr/share/fonts',
-            '/System/Library/Fonts',
-            '/usr/local/share/fonts',
-            '~/.fonts'
-        ]
+    # Linux font directories (prioritized for WSL/Ubuntu)
+    linux_font_dirs = [
+        # "/usr/share/fonts",
+        # "/usr/local/share/fonts", 
+        # "/usr/share/fonts/truetype",
+        # "/usr/share/fonts/ttf",
+        # "~/.fonts",
+        # "~/.local/share/fonts"
+    ]
     
-    # Look for common font files
-    font_names = ['arial.ttf', 'Arial.ttf', 'times.ttf', 'Times.ttf', 
-                  'calibri.ttf', 'Calibri.ttf', 'helvetica.ttf', 'Helvetica.ttf',
-                  'DejaVuSans.ttf', 'LiberationSans-Regular.ttf']
+    # Windows font directories (fallback)
+    windows_font_dirs = [
+        # 'C:/Windows/Fonts',
+        # 'C:/Windows/System32/Fonts'
+    ]
+    
+    # Combine all directories
+    font_dirs = linux_font_dirs + windows_font_dirs
+    
+    print("🔍 Searching for fonts in system directories...")
     
     for font_dir in font_dirs:
-        if os.path.exists(font_dir):
-            for font_name in font_names:
-                font_path = os.path.join(font_dir, font_name)
-                if os.path.exists(font_path):
-                    fonts.append(font_path)
+        # Expand user directory
+        expanded_dir = os.path.expanduser(font_dir) if font_dir.startswith('~') else font_dir
+        
+        if os.path.exists(expanded_dir):
+            print(f"  📁 Checking: {expanded_dir}")
+            try:
+                # Get all .ttf and .otf files
+                for root, dirs, files in os.walk(expanded_dir):
+                    for file in files:
+                        if file.lower().endswith(('.ttf', '.otf')):
+                            font_path = os.path.join(root, file)
+                            # Test if the font can be loaded
+                            try:
+                                test_font = truetype(font_path, 20)
+                                fonts.append(font_path)
+                                print(f"    ✅ Found: {file}")
+                            except Exception as e:
+                                # Skip fonts that can't be loaded
+                                continue
+            except Exception as e:
+                print(f"    ❌ Error accessing {expanded_dir}: {e}")
+                continue
+        else:
+            print(f"    ⚠️  Directory not found: {expanded_dir}")
+    
+    # Check local fonts directory
+    local_fonts_dir = os.path.join(os.getcwd(), 'fonts')
+    if os.path.exists(local_fonts_dir):
+        print(f"  📁 Checking local fonts directory: {local_fonts_dir}")
+        try:
+            for file in os.listdir(local_fonts_dir):
+                if file.lower().endswith(('.ttf', '.otf')):
+                    font_path = os.path.join(local_fonts_dir, file)
+                    try:
+                        test_font = truetype(font_path, 20)
+                        fonts.append(font_path)
+                        print(f"    ✅ Found local font: {file}")
+                    except Exception as e:
+                        print(f"    ❌ Could not load local font {file}: {e}")
+        except Exception as e:
+            print(f"    ❌ Error accessing local fonts directory: {e}")
+    else:
+        print(f"  ⚠️  Local fonts directory not found: {local_fonts_dir}")
+    
+    # Remove duplicates
+    fonts = list(set(fonts))
+    
+    if fonts:
+        print(f"🎉 Total fonts found: {len(fonts)}")
+        print("📋 Font list:")
+        for font in fonts[:10]:  # Show first 10 fonts
+            font_name = os.path.basename(font)
+            print(f"    • {font_name}")
+        if len(fonts) > 10:
+            print(f"    ... and {len(fonts) - 10} more fonts")
+    else:
+        print("⚠️  No system fonts found! Will use PIL default font.")
     
     return fonts if fonts else None
 
@@ -84,37 +137,37 @@ class EnhancedImageCaptcha:
     # Part 3 configuration (Medium degradation)
     medium_config = {
         'lookup_table': [int(i * 1.97) for i in range(256)],
-        'character_offset_dx': (0, 8),
-        'character_offset_dy': (0, 10),
-        'character_rotate': (-45, 45),
-        'character_warp_dx': (0.2, 0.4),
-        'character_warp_dy': (0.3, 0.4),
+        'character_offset_dx': (0, 6),
+        'character_offset_dy': (0, 8),
+        'character_rotate': (-35, 35),
+        'character_warp_dx': (0.1, 0.25),
+        'character_warp_dy': (0.15, 0.25),
         'word_space_probability': 0.4,
         'word_offset_dx': 0.35,
-        'noise_dots': 50,
-        'noise_curves': 3,
-        'line_distractors': 5,
+        'noise_dots': 35,
+        'noise_curves': 2,
+        'line_distractors': 2,  # Reduced from 5 to 2
         'complex_background': True
     }
     
     # Part 4 configuration (High degradation)
     hard_config = {
         'lookup_table': [int(i * 1.97) for i in range(256)],
-        'character_offset_dx': (0, 12),
-        'character_offset_dy': (0, 15),
-        'character_rotate': (-60, 60),
-        'character_warp_dx': (0.3, 0.6),
-        'character_warp_dy': (0.4, 0.6),
-        'word_space_probability': 0.5,
-        'word_offset_dx': 0.45,
-        'noise_dots': 80,
-        'noise_curves': 5,
-        'line_distractors': 8,
+        'character_offset_dx': (0, 8),
+        'character_offset_dy': (0, 10),
+        'character_rotate': (-45, 45),
+        'character_warp_dx': (0.15, 0.35),
+        'character_warp_dy': (0.2, 0.35),
+        'word_space_probability': 0.4,
+        'word_offset_dx': 0.4,
+        'noise_dots': 45,  # Reduced from 80
+        'noise_curves': 3,  # Reduced from 5
+        'line_distractors': 3,  # Reduced from 8
         'complex_background': True,
-        'circular_distractors': 3,
-        'non_ascii_distractors': 2,
-        'blur_effect': True,
-        'character_overlap': True
+        'circular_distractors': 2,  # Reduced from 3
+        'non_ascii_distractors': 1,  # Reduced from 2
+        'blur_effect': False,  # Disabled blur for better readability
+        'character_overlap': False  # Disabled overlap for better readability
     }
 
     def __init__(self,
@@ -128,6 +181,31 @@ class EnhancedImageCaptcha:
         self._fonts = fonts or DEFAULT_FONTS
         self._font_sizes = font_sizes or (30, 36, 42, 48)
         self.difficulty = difficulty
+        
+        # Print font information during initialization
+        if not hasattr(EnhancedImageCaptcha, '_fonts_printed'):
+            print(f"\n🎨 Initializing Enhanced CAPTCHA Generator (Difficulty: {difficulty})")
+            print("=" * 60)
+            
+            if self._fonts:
+                print(f"✅ Using {len(self._fonts)} system fonts")
+                print("🔤 Font files being used:")
+                for i, font_path in enumerate(self._fonts[:5]):  # Show first 5
+                    font_name = os.path.basename(font_path)
+                    print(f"    {i+1}. {font_name}")
+                if len(self._fonts) > 5:
+                    print(f"    ... and {len(self._fonts) - 5} more fonts")
+            else:
+                print("⚠️  WARNING: No system fonts found! Using PIL default font.")
+                print("   This may result in poor text quality.")
+                print("   Consider installing fonts or placing .ttf files in fonts/ directory")
+            
+            print(f"📏 Font sizes: {self._font_sizes}")
+            print(f"🖼️  Image size: {width}x{height}")
+            print("=" * 60)
+            
+            # Set flag so we only print once per session
+            EnhancedImageCaptcha._fonts_printed = True
         
         # Load configuration based on difficulty
         if difficulty == 'part3':
@@ -147,16 +225,31 @@ class EnhancedImageCaptcha:
             
         if self._fonts:
             try:
-                self._truefonts = [
-                    truetype(n, s)
-                    for n in self._fonts
-                    for s in self._font_sizes
-                ]
-            except:
-                # If loading fonts fails, use default font
-                self._truefonts = [load_default() for _ in self._font_sizes]
+                print(f"🔤 Loading fonts for size {self._font_sizes}...")
+                loaded_fonts = []
+                for font_path in self._fonts:
+                    font_name = os.path.basename(font_path)
+                    for size in self._font_sizes:
+                        try:
+                            font = truetype(font_path, size)
+                            loaded_fonts.append(font)
+                        except Exception as e:
+                            print(f"    ⚠️  Could not load {font_name} at size {size}: {e}")
+                            continue
+                
+                if loaded_fonts:
+                    self._truefonts = loaded_fonts
+                    print(f"    ✅ Successfully loaded {len(loaded_fonts)} font instances")
+                else:
+                    print("    ❌ Failed to load any fonts, using default")
+                    self._truefonts = [load_default()]
+                    
+            except Exception as e:
+                print(f"    ❌ Font loading error: {e}")
+                self._truefonts = [load_default()]
         else:
-            self._truefonts = [load_default() for _ in self._font_sizes]
+            print("    ⚠️  No fonts provided, using PIL default font")
+            self._truefonts = [load_default()]
             
         return self._truefonts
 
@@ -170,18 +263,18 @@ class EnhancedImageCaptcha:
         """Create a complex background with gradients and patterns."""
         w, h = image.size
         
-        # Create gradient background
+        # Create very subtle gradient background
         for y in range(h):
             for x in range(w):
-                # Create a subtle gradient
-                r = int(220 + (x / w) * 35)
-                g = int(230 + (y / h) * 25)
-                b = int(240 + ((x + y) / (w + h)) * 15)
+                # Create a much more subtle gradient
+                r = int(235 + (x / w) * 15)  # Very light gradient
+                g = int(240 + (y / h) * 10)
+                b = int(245 + ((x + y) / (w + h)) * 10)
                 image.putpixel((x, y), (min(255, r), min(255, g), min(255, b)))
         
         return image
 
-    def create_line_distractors(self, image: Image, color: ColorTuple, count: int = 5) -> Image:
+    def create_line_distractors(self, image: Image, color: ColorTuple, count: int = 2) -> Image:
         """Add line distractors across the image."""
         draw = Draw(image)
         w, h = image.size
@@ -202,16 +295,16 @@ class EnhancedImageCaptcha:
                 x1, x2 = x, x
                 y1, y2 = 0, h
             
-            # Vary line width and transparency
-            width = secrets.randbelow(3) + 1
-            alpha = secrets.randbelow(100) + 50
-            line_color = (*color[:3], alpha) if len(color) == 3 else color
+            # Use lighter colors and thinner lines for less interference
+            width = 1  # Always use thin lines
+            alpha = secrets.randbelow(50) + 30  # Lower alpha for subtlety
+            line_color = (*color[:3], alpha) if len(color) == 3 else (*color[:3], alpha)
             
             draw.line([(x1, y1), (x2, y2)], fill=line_color, width=width)
         
         return image
 
-    def create_circular_distractors(self, image: Image, color: ColorTuple, count: int = 3) -> Image:
+    def create_circular_distractors(self, image: Image, color: ColorTuple, count: int = 2) -> Image:
         """Add circular/elliptical distractors."""
         draw = Draw(image)
         w, h = image.size
@@ -220,42 +313,44 @@ class EnhancedImageCaptcha:
             # Random position and size
             x = secrets.randbelow(w)
             y = secrets.randbelow(h)
-            radius = secrets.randbelow(20) + 10
+            radius = secrets.randbelow(15) + 8  # Smaller circles
             
             # Create ellipse with random eccentricity
             x1, y1 = x - radius, y - radius
             x2, y2 = x + radius, y + radius
             
-            # Vary transparency
-            alpha = secrets.randbelow(80) + 30
+            # Use very light transparency
+            alpha = secrets.randbelow(40) + 20  # Very subtle
             circle_color = (*color[:3], alpha) if len(color) == 3 else color
             
-            # Randomly choose filled or outline
-            if secrets.randbelow(2):
-                draw.ellipse([(x1, y1), (x2, y2)], outline=circle_color, width=2)
-            else:
-                draw.ellipse([(x1, y1), (x2, y2)], fill=circle_color)
+            # Always use outline only for less interference
+            draw.ellipse([(x1, y1), (x2, y2)], outline=circle_color, width=1)
         
         return image
 
-    def add_non_ascii_distractors(self, image: Image, color: ColorTuple, count: int = 2) -> Image:
+    def add_non_ascii_distractors(self, image: Image, color: ColorTuple, count: int = 1) -> Image:
         """Add non-ASCII character distractors that look similar to alphanumeric chars."""
         draw = Draw(image)
         w, h = image.size
         
-        # Similar-looking characters
-        distractors = ['÷', '×', '±', '≠', '≈', '∞', '∑', '∏', '∆', '∇', '∈', '∉']
+        # Limited set of specific non-ASCII characters
+        distractors = ['*', '#', '?', '✓']
         
         if self.truefonts:
             for _ in range(count):
                 char = secrets.choice(distractors)
                 font = secrets.choice(self.truefonts)
                 
-                x = secrets.randbelow(w - 20)
-                y = secrets.randbelow(h - 20)
+                # Place distractors away from center where main text is
+                if secrets.randbelow(2):
+                    x = secrets.randbelow(w // 4)  # Left side
+                else:
+                    x = secrets.randbelow(w // 4) + 3 * w // 4  # Right side
                 
-                # Lower transparency for distractors
-                alpha = secrets.randbelow(60) + 40
+                y = secrets.randbelow(h - 30)
+                
+                # Very low transparency for distractors
+                alpha = secrets.randbelow(40) + 30  # More subtle
                 distractor_color = (*color[:3], alpha) if len(color) == 3 else color
                 
                 try:
@@ -282,22 +377,49 @@ class EnhancedImageCaptcha:
         return image
 
     @staticmethod
-    def create_noise_dots(image: Image, color: ColorTuple, width: int = 3, number: int = 30) -> Image:
+    def create_noise_dots(image: Image, color: ColorTuple, width: int = 2, number: int = 30) -> Image:
         """Create noise dots (enhanced version)."""
         draw = Draw(image)
         w, h = image.size
-        while number:
+        count = 0
+        while count < number:
             x1 = secrets.randbelow(w + 1)
             y1 = secrets.randbelow(h + 1)
-            dot_width = secrets.randbelow(width) + 1
-            draw.line(((x1, y1), (x1 - 1, y1 - 1)), fill=color, width=dot_width)
-            number -= 1
+            
+            # Make dots smaller and lighter
+            dot_width = 1  # Always use small dots
+            
+            # Use lighter colors for dots
+            if len(color) >= 3:
+                light_color = (
+                    min(255, color[0] + 50),
+                    min(255, color[1] + 50), 
+                    min(255, color[2] + 50)
+                )
+            else:
+                light_color = color
+                
+            draw.line(((x1, y1), (x1, y1)), fill=light_color, width=dot_width)
+            count += 1
         return image
 
     def _draw_character(self, c: str, draw: ImageDraw, color: ColorTuple) -> Image:
         """Draw a single character with transformations."""
+        if c == " ":
+            # Return a small transparent image for spaces
+            return createImage('RGBA', (10, 10))
+            
         font = secrets.choice(self.truefonts)
         _, _, w, h = draw.multiline_textbbox((1, 1), c, font=font)
+
+        # Ensure minimum character size based on image dimensions
+        min_char_size = min(self._width // 8, self._height // 2)
+        if w < min_char_size or h < min_char_size:
+            # Find a larger font size if character is too small
+            larger_fonts = [f for f in self.truefonts if f.size >= min_char_size]
+            if larger_fonts:
+                font = secrets.choice(larger_fonts)
+                _, _, w, h = draw.multiline_textbbox((1, 1), c, font=font)
 
         dx1 = secrets.randbelow(self.config['character_offset_dx'][1] - self.config['character_offset_dx'][0] + 1) + self.config['character_offset_dx'][0]
         dy1 = secrets.randbelow(self.config['character_offset_dy'][1] - self.config['character_offset_dy'][0] + 1) + self.config['character_offset_dy'][0]
@@ -346,30 +468,69 @@ class EnhancedImageCaptcha:
                 images.append(self._draw_character(" ", draw, color))
             images.append(self._draw_character(c, draw, color))
 
-        # Calculate positioning
-        text_width = sum([im.size[0] for im in images])
-        width = max(text_width, self._width)
-        image = image.resize((width, self._height))
+        # Remove empty images (spaces)
+        images = [im for im in images if im.size[0] > 0 and im.size[1] > 0]
+        
+        if not images:
+            return image
 
-        average = int(text_width / len(chars)) if chars else 0
-        rand = int(self.config['word_offset_dx'] * average)
-        offset = int(average * 0.1)
+        # Calculate total text width and individual character widths
+        char_widths = [im.size[0] for im in images]
+        total_char_width = sum(char_widths)
+        
+        # Calculate spacing between characters based on image width
+        num_chars = len(images)
+        if num_chars > 1:
+            # Reserve space for characters and calculate remaining space for gaps
+            available_width = self._width * 0.9  # Use 90% of width, leave 10% margin
+            target_char_width = available_width * 0.7  # 70% for characters
+            target_spacing_width = available_width * 0.3  # 30% for spacing
+            
+            # Scale characters if they're too small or too large
+            if total_char_width < target_char_width:
+                scale_factor = target_char_width / total_char_width
+                # Resize characters to better fit the image
+                scaled_images = []
+                for im in images:
+                    new_width = int(im.size[0] * scale_factor)
+                    new_height = int(im.size[1] * scale_factor)
+                    scaled_images.append(im.resize((new_width, new_height), Resampling.LANCZOS))
+                images = scaled_images
+                char_widths = [im.size[0] for im in images]
+                total_char_width = sum(char_widths)
+            
+            # Calculate spacing between characters
+            spacing_per_gap = int(target_spacing_width / (num_chars - 1))
+        else:
+            spacing_per_gap = 0
+        
+        # Calculate starting offset to center the text
+        total_width_needed = total_char_width + (spacing_per_gap * (num_chars - 1))
+        start_offset = max(10, int((self._width - total_width_needed) / 2))
 
         # Handle character overlap for part4
         if self.config.get('character_overlap', False):
-            overlap_factor = 0.7  # Characters can overlap by 30%
-        else:
-            overlap_factor = 1.0
+            overlap_reduction = int(spacing_per_gap * 0.3)  # Reduce spacing by 30%
+            spacing_per_gap = max(5, spacing_per_gap - overlap_reduction)
 
-        # Paste characters
-        for im in images:
+        # Paste characters with proper spacing
+        current_offset = start_offset
+        for i, im in enumerate(images):
             w, h = im.size
+            
+            # Add some random vertical offset for more natural look
+            vertical_offset = int((self._height - h) / 2) + secrets.randbelow(11) - 5
+            vertical_offset = max(0, min(vertical_offset, self._height - h))
+            
+            # Add small horizontal random variation
+            horizontal_variation = secrets.randbelow(11) - 5
+            final_offset = max(0, current_offset + horizontal_variation)
+            
             mask = im.convert('L').point(self.config['lookup_table'])
-            image.paste(im, (offset, int((self._height - h) / 2)), mask)
-            offset = offset + int(w * overlap_factor) + (-secrets.randbelow(rand + 1))
-
-        if width > self._width:
-            image = image.resize((self._width, self._height))
+            image.paste(im, (final_offset, vertical_offset), mask)
+            
+            # Update offset for next character
+            current_offset += w + spacing_per_gap
 
         return image
 
@@ -377,20 +538,29 @@ class EnhancedImageCaptcha:
                       bg_color: ColorTuple | None = None,
                       fg_color: ColorTuple | None = None) -> Image:
         """Generate the final CAPTCHA image with all effects."""
-        # Generate colors
-        background = bg_color if bg_color else random_color(230, 255)
-        random_fg_color = random_color(10, 180, secrets.randbelow(36) + 200)
+        # Generate colors with better contrast
+        background = bg_color if bg_color else random_color(240, 255)  # Lighter background
+        random_fg_color = random_color(20, 100, secrets.randbelow(36) + 220)  # Darker, more solid text
         color: ColorTuple = fg_color if fg_color else random_fg_color
 
         # Create base captcha image
         im = self.create_captcha_image(chars, color, background)
         
-        # Add noise dots
+        # Add noise dots (reduced intensity)
         self.create_noise_dots(im, color, number=self.config['noise_dots'])
         
-        # Add noise curves
+        # Add noise curves (lighter)
         for _ in range(self.config['noise_curves']):
-            self.create_noise_curve(im, color)
+            # Use lighter color for curves
+            if len(color) >= 3:
+                light_curve_color = (
+                    min(255, color[0] + 80),
+                    min(255, color[1] + 80),
+                    min(255, color[2] + 80)
+                )
+            else:
+                light_curve_color = color
+            self.create_noise_curve(im, light_curve_color)
         
         # Add line distractors (part3 and part4)
         if 'line_distractors' in self.config:
@@ -404,13 +574,8 @@ class EnhancedImageCaptcha:
         if 'non_ascii_distractors' in self.config:
             self.add_non_ascii_distractors(im, color, self.config['non_ascii_distractors'])
         
-        # Apply smooth filter
+        # Apply smooth filter (always apply for better text clarity)
         im = im.filter(SMOOTH)
-        
-        # Apply blur effect (part4 only)
-        if self.config.get('blur_effect', False):
-            blur_radius = secrets.randbelow(2) + 1
-            im = im.filter(GaussianBlur(radius=blur_radius))
         
         return im
 

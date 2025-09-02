@@ -1,0 +1,19 @@
+# Enhanced CAPTCHA Generator Requirements
+# Core dependencies for image processing and CAPTCHA generation
+
+# Image processing
+Pillow>=9.0.0
+
+# Configuration and data handling
+PyYAML>=6.0
+
+# Optional: Enhanced image processing capabilities
+numpy>=1.21.0
+
+# Optional: For advanced image effects (if needed)
+# matplotlib>=3.5.0
+# scikit-image>=0.19.0
+
+# Development and testing (optional)
+# pytest>=7.0.0
+# pytest-cov>=4.0.0
