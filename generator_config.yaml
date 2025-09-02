@@ -1,0 +1,70 @@
+# CAPTCHA Generator Configuration
+# This file configures the generation of CAPTCHAs for different difficulty levels
+
+# Global settings
+output_dir: "data_generated"
+
+# Part-specific configurations
+parts:
+  part2:
+    # Basic enhanced alphanumeric CAPTCHAs (3-7 characters)
+    num_samples: 1000
+    width: 160
+    height: 60
+    min_length: 3
+    max_length: 7
+    
+    # Font configuration (leave empty to auto-detect system fonts)
+    fonts: []  # Will use system fonts automatically
+    font_sizes: [30, 36, 42, 48]
+    
+    # Color configuration (optional - leave null for random colors)
+    bg_color: null  # null for random, or specify as [R, G, B] e.g., [240, 240, 240]
+    fg_color: null  # null for random, or specify as [R, G, B] e.g., [50, 50, 50]
+    
+    # Description: Clean alphanumeric CAPTCHAs with moderate distortions
+    
+  part3:
+    # Medium degradation CAPTCHAs
+    num_samples: 1000
+    width: 180
+    height: 80
+    min_length: 4
+    max_length: 6
+    
+    fonts: []
+    font_sizes: [32, 38, 44, 50]
+    
+    bg_color: null
+    fg_color: null
+    
+    # Description: Enhanced distortions, line distractors, complex backgrounds
+    
+  part4:
+    # High degradation CAPTCHAs
+    num_samples: 1000
+    width: 200
+    height: 100
+    min_length: 4
+    max_length: 6
+    
+    fonts: []
+    font_sizes: [34, 40, 46, 52]
+    
+    bg_color: null
+    fg_color: null
+    
+    # Description: Maximum difficulty with all distractors and effects
+
+# Advanced font configuration (optional)
+# If you want to specify custom fonts, uncomment and modify:
+# custom_fonts:
+#   - "/path/to/font1.ttf"
+#   - "/path/to/font2.ttf"
+#   - "/path/to/font3.ttf"
+
+# Example with specific colors:
+# parts:
+#   part2:
+#     bg_color: [245, 245, 245]  # Light gray background
+#     fg_color: [30, 30, 30]     # Dark text
